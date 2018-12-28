@@ -2,14 +2,65 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="cn.eugene.mapper.UserMapper">
+
+    <!-- type表示resultMap最终映射的Java对象，id用来标示resultMap -->
+	<resultMap type="user" id="userResultMap">
+	    <!-- id,查询结果集中的唯一标识,column 表示查询出的列名，property表示对应pojo属性名-->
+	    <id column="id_" property="id"/>
+	    <!-- result,查询结果集中的普通列名 -->
+	    <result column="userName_" property="userName"/>
+	</resultMap>
+	<!-- id sql片段的唯一标识 ，经验：一般是基于单表来定义sql片段，这样sql的重用性才高，sql片段中不包含where-->
+	<sql id="query_user_where">
+	     <if test="userCustom!=null">		
+		    <if test="userCustom.userName!=null and userCustom.userName!=''">
+		    and userName like '%${userCustom.userName}%'
+		    </if>
+		</if>
+	</sql>
+	<sql id="query_user_id">
+	     <if test="ids!=null">		
+		   <foreach collection="ids" item="user_id" open="and ("  close=")" separator="or">
+		   <!-- 每个遍历需要拼接的串 -->
+		   id=#{user_id}
+		   </foreach>
+		</if>
+	</sql>
+	<sql id="query_user_id2">
+	     <if test="ids!=null">		
+		   <foreach collection="ids" item="user_id" open="and id in("  close=")" separator=",">
+		   <!-- 每个遍历需要拼接的串 -->
+		   #{user_id}
+		   </foreach>
+		</if>
+	</sql>
 	<!-- 根据id查询用户信息 -->
 	<select id="findUserById" parameterType="int" resultType="cn.eugene.po.User">
 		select * from user where id = #{id}
+	</select>
+
+	<!-- 根据id查询用户信息,resultMap指定定义的resultMap，如果定义的resultMap在其他的xml中，前面要加上naespace -->
+	<select id="findUserById2" parameterType="int" resultMap="userResultMap">
+		select id id_,userName userName_  from user where id = #{id}
 	</select>
 	
      <!-- 根据用户名查询用户信息 -->
      <select id="findUserByName" parameterType="java.lang.String" resultType="cn.eugene.po.User">
 		select * from user where userName like '%${value}%'
+	</select>
+	  <!-- 用户信息综合查询 -->
+     <select id="findUserList" parameterType="cn.eugene.po.UserQueryVo" resultType="cn.eugene.po.UserCustom">
+		select * from user where userName like '%${userCustom.userName}%'
+	</select>
+	  <!-- 符合条件的用户数查询 -->
+     <select id="findUserCount" parameterType="cn.eugene.po.UserQueryVo" resultType="int">
+		select count(*) from user 
+		<!-- where可以自动去掉条件中的一个and -->
+		<where>
+		<!-- refid，sql片段的标识 -->
+		<include refid="query_user_where"></include>
+		<include refid="query_user_id2"></include>
+		</where>
 	</select>
 	<insert id="insertUser" parameterType="cn.eugene.po.User">
 		insert into user(userName,userAge,userAddress)VALUES(#{userName},#{userAge},#{userAddress})
